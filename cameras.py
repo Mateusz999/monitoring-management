@@ -3,7 +3,7 @@ from tkinter import scrolledtext
 from netmiko import ConnectHandler
 import logging
 from time import sleep
-unreachablePortsList = []
+unreachablePortsList = {}
 '''
 nie zapominaj o ssh na switchu oraz ip ssh password-auth
 '''
@@ -12,6 +12,11 @@ NetworkDevice = {
     "username": "cisco",
     "device_type": "cisco_s300",
     "password": "Mochnik1",
+}
+
+portList = {
+    "gi1" : "192.168.1.10",
+    "gi2" : "192.168.1.64"
 }
 def log_message(message, log_type):
     if log_type == "error":
@@ -24,15 +29,18 @@ def log_message(message, log_type):
     log_text.yview(tk.END)
 
 def on_button_click(port_number):
-        log_message(f"Port {port_number} was clicked", "black")
+        log_message(f"Port Gi{port_number} -  {portList['gi' + str(port_number)]} is clicked", "black")
         
         try:
             PortConnection = ConnectHandler(**NetworkDevice)
 
-            output = PortConnection.send_command(f"ping 192.168.1.{port_number}")
+            output = PortConnection.send_command(f"ping {portList['gi'+ str(port_number)]}")
             if "timeout" in output:
-                log_message(f"Port 192.168.1.{port_number} not respond.","black")
-                unreachablePortsList.append(port_number)
+                log_message(f"Port {portList['gi' + str(port_number)]} not respond", "black")
+
+                unreachablePortsList['gi'+str(port_number)] = portList['gi'+str(port_number)]
+                print(unreachablePortsList)
+
                 root.update()
 
             else:
@@ -62,30 +70,36 @@ def scan_ports():
     try:
         connection = ConnectHandler(**NetworkDevice)
 
-        for lastOctet in range (7,11,1):
-            output = connection.send_command(f"ping 192.168.1.{lastOctet}")
+        for key, value in portList.items():
+            print(f"Key: {key}, Value: {value}")
+            output = connection.send_command(f"ping {value}")
             if "timeout" in output:
-                log_message(f"Port 192.168.1.{lastOctet} not respond.","black")
-                unreachablePortsList.append(lastOctet)
+                log_message(f"Port {portList[key]} not respond", "black")
+                unreachablePortsList[key] = value
                 root.update()
 
             else:
                 log_message(output,"black")
                 root.update()
 
+        for key, value in unreachablePortsList.items():
+            log_message(f"Port {key} :  {value} power off","black")
+            output = connection.send_config_set(["configure terminal", f"interface {key}", "shutdown"])
+
+
+            sleep(1)
+            root.update()
+
+        for port in unreachablePortsList:
+            log_message(f"Port  192.168.1.{port} power up","black")
+            output = connection.send_config_set(["configure terminal", f"interface {key}", "no shutdown"])
+            sleep(1)
+            root.update()
         connection.disconnect()
 
     except Exception as e:
         print(f"Error: {e}")
-    for port in unreachablePortsList:
-        log_message(f"Port  192.168.1.{port} power off","black")
-        sleep(1)
-        root.update()
 
-    for port in unreachablePortsList:
-        log_message(f"Port  192.168.1.{port} power up","black")
-        sleep(1)
-        root.update()
 
 
 root = tk.Tk()
