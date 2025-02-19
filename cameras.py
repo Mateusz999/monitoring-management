@@ -3,6 +3,7 @@ from tkinter import scrolledtext
 from netmiko import ConnectHandler
 import logging
 from time import sleep
+from datetime import datetime
 unreachablePortsList = {}
 '''
 nie zapominaj o ssh na switchu oraz ip ssh password-auth
@@ -18,6 +19,43 @@ portList = {
     "gi1" : "192.168.1.10",
     "gi2" : "192.168.1.64"
 }
+
+def periodicallyPortScan():
+    try:
+        connection = ConnectHandler(**NetworkDevice)
+
+        for key, value in portList.items():
+            print(f"Key: {key}, Value: {value}")
+            output = connection.send_command(f"ping {value}")
+            if "timeout" in output:
+                log_message(f"{datetime.now().strftime("%d.%m.%y %H:%M:%S: ")}ERROR: Port {portList[key]} can't be reached...", "black")
+                unreachablePortsList[key] = value
+                root.update()
+
+            else:
+                log_message(f"{datetime.now().strftime("%d.%m.%y %H:%M:%S: ")}Port {portList[key]} works properly", "black")
+                root.update()
+
+        for key, value in unreachablePortsList.items():
+            log_message(f"{datetime.now().strftime("%d.%m.%y %H:%M:%S: ")}Port {key} :  {value} power off","black")
+            output = connection.send_config_set(["configure terminal", f"interface {key}", "shutdown"])
+
+
+            sleep(1)
+            root.update()
+
+        for port in unreachablePortsList:
+            log_message(f"{datetime.now().strftime("%d.%m.%y %H:%M:%S: ")}Port {key} :  {value} power up","black")
+            
+            output = connection.send_config_set(["configure terminal", f"interface {key}", "no shutdown"])
+            root.update()
+        unreachablePortsList.clear()
+        connection.disconnect()
+
+    except Exception as e:
+        print(f"Error: {e}")
+    root.after(120000,periodicallyPortScan)
+
 def log_message(message, log_type):
     if log_type == "error":
         log_text.config(fg="red")
@@ -29,14 +67,14 @@ def log_message(message, log_type):
     log_text.yview(tk.END)
 
 def on_button_click(port_number):
-        log_message(f"Port Gi{port_number} -  {portList['gi' + str(port_number)]} is clicked", "black")
+        log_message(f"{datetime.now().strftime("%d.%m.%y %H:%M:%S: ")} Port Gi{port_number} -  {portList['gi' + str(port_number)]} is clicked", "black")
         
         try:
             PortConnection = ConnectHandler(**NetworkDevice)
 
             output = PortConnection.send_command(f"ping {portList['gi'+ str(port_number)]}")
             if "timeout" in output:
-                log_message(f"Port {portList['gi' + str(port_number)]} not respond", "black")
+                log_message(f"{datetime.now().strftime("%d.%m.%y %H:%M:%S: ")}Port {portList['gi' + str(port_number)]} not respond", "black")
 
                 unreachablePortsList['gi'+str(port_number)] = portList['gi'+str(port_number)]
                 print(unreachablePortsList)
@@ -44,7 +82,8 @@ def on_button_click(port_number):
                 root.update()
 
             else:
-                log_message(output,"black")
+                log_message(f"{datetime.now().strftime("%d.%m.%y %H:%M:%S: ")}Port {portList['gi' + str(port_number)]} works properly", "black")
+                
                 root.update()
                
             PortConnection.disconnect()
@@ -59,12 +98,12 @@ def connect_to_switch():
     try:
         tryConnect = ConnectHandler(**NetworkDevice)
 
-        log_message("Succesfully connected", "black")
+        log_message(f"{datetime.now().strftime("%d.%m.%y %H:%M:%S: ")}Succesfully connected", "black")
           
         tryConnect.disconnect()
 
     except Exception as e:
-        log_message(f"Error: {e}","black")
+        log_message(f"{datetime.now().strftime("%d.%m.%y %H:%M:%S: ")}Error: {e}","black")
 
 def scan_ports():
     try:
@@ -74,16 +113,16 @@ def scan_ports():
             print(f"Key: {key}, Value: {value}")
             output = connection.send_command(f"ping {value}")
             if "timeout" in output:
-                log_message(f"Port {portList[key]} not respond", "black")
+                log_message(f"{datetime.now().strftime("%d.%m.%y %H:%M:%S: ")}ERROR: Port {portList[key]} can't be reached...", "black")
                 unreachablePortsList[key] = value
                 root.update()
 
             else:
-                log_message(output,"black")
+                log_message(f"{datetime.now().strftime("%d.%m.%y %H:%M:%S: ")}Port {portList[key]} works properly", "black")
                 root.update()
 
         for key, value in unreachablePortsList.items():
-            log_message(f"Port {key} :  {value} power off","black")
+            log_message(f"{datetime.now().strftime("%d.%m.%y %H:%M:%S: ")}Port {key} :  {value} power off","black")
             output = connection.send_config_set(["configure terminal", f"interface {key}", "shutdown"])
 
 
@@ -91,10 +130,12 @@ def scan_ports():
             root.update()
 
         for port in unreachablePortsList:
-            log_message(f"Port  192.168.1.{port} power up","black")
+            log_message(f"{datetime.now().strftime("%d.%m.%y %H:%M:%S: ")}Port {key} :  {value} power up","black")
+            
             output = connection.send_config_set(["configure terminal", f"interface {key}", "no shutdown"])
             sleep(1)
             root.update()
+        unreachablePortsList.clear()
         connection.disconnect()
 
     except Exception as e:
@@ -130,5 +171,7 @@ connect_button.pack(pady=5)
 
 scan_button = tk.Button(root, text="Scan Ports", command=scan_ports)
 scan_button.pack(pady=5)
+
+root.after(1000,periodicallyPortScan)
 
 root.mainloop()
