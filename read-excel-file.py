@@ -1,4 +1,5 @@
 import pandas as pd
+import pprintpp
 dataframe =  pd.read_excel('SwitchportList.xlsx')
 switches = {}
 #print(len(dataframe.values))
@@ -32,8 +33,4 @@ for el in dataframe.values:
                 })
 
 
-for key,item in switches.items():
-    for itemKey,ItemItem in item.items():
-        for el in ItemItem:
-            print(el)
-            print("\n")
+pprintpp.pprint(switches)
