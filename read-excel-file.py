@@ -1,5 +1,6 @@
 import pandas as pd
 import pprintpp
+from time import sleep
 dataframe =  pd.read_excel('SwitchportList.xlsx')
 switches = {}
 #print(len(dataframe.values))
@@ -32,5 +33,17 @@ for el in dataframe.values:
                     }]
                 })
 
+'''
+addictionary pprintpp method 
+'''
+#pprintpp.pprint(switches)
 
-pprintpp.pprint(switches)
+"""
+down below simply FOR LOOP which is useful to listing address for scanning ports reason
+"""
+for key,item in switches.items():
+    for port in item["ports"]:
+        for portName, details in port.items():
+            for detail in details:
+                print(f"ping {detail['addr']}")
+                sleep(1)
