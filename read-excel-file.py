@@ -32,4 +32,8 @@ for el in dataframe.values:
                 })
 
 
-print(switches)
+for key,item in switches.items():
+    for itemKey,ItemItem in item.items():
+        for el in ItemItem:
+            print(el)
+            print("\n")
